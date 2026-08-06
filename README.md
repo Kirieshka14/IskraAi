@@ -9,13 +9,13 @@
 - клиентский экран `/admin/bots`: backend проверяет сессию и роль, UI обрабатывает `401` и `403`;
 - единый UI-конфиг тарифов в `lib/subscription-plans.ts` как fallback/представление публичного каталога тарифов.
 
-## Настройка
+## Установка и разработка
 
 Требуется Node.js 20+.
 
 ```bash
-npm ci
-cp .env.example .env.local
+npm install
+cp .env.example .env.local # необязательно
 npm run dev
 ```
 
@@ -25,14 +25,25 @@ npm run dev
 NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
-`NEXT_PUBLIC_API_URL` публична и должна указывать на отдельный IskraAi backend. Не добавляйте private env или ключи в этот репозиторий. Backend должен разрешить точный origin frontend через `FRONTEND_URL` и credentialed CORS.
+`NEXT_PUBLIC_API_URL` публична и должна указывать на отдельный IskraAi backend. Не добавляйте private env или ключи в этот репозиторий. Если переменная не задана, frontend всё равно собирается, а зависящие от API экраны показывают честное состояние недоступности. При подключении backend он должен разрешить точный origin frontend через credentialed CORS.
 
-## Проверки
+## Статическая сборка и публикация
 
 ```bash
+npm install
 npm run typecheck
 npm run build
 ```
+
+Next.js создаст полноценный статический экспорт в `out/`, включая `out/index.html` и HTML-файлы маршрутов. Загрузите **содержимое** папки `out/` на любой обычный статический хостинг. Backend в экспорт не входит; его адрес встраивается при сборке через `NEXT_PUBLIC_API_URL`.
+
+Для локальной проверки отдавайте `out/` по HTTP, например любым простым static server:
+
+```bash
+npx serve out
+```
+
+Открытие `out/index.html` двойным кликом использует протокол `file://`. Браузер может ограничить загрузку JavaScript, CSS, маршрутизацию и сетевые запросы в этом режиме, поэтому используйте статический hosting или локальный HTTP-сервер. Ручной дублирующий `index.html` в исходниках не нужен: его генерирует Next.js.
 
 ## Границы репозитория
 
