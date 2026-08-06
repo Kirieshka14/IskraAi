@@ -29,13 +29,23 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 
 ## Статическая сборка и публикация
 
+Публичная версия: **https://kirieshka14.github.io/IskraAi/**
+
 ```bash
 npm install
 npm run typecheck
 npm run build
 ```
 
-Next.js создаст полноценный статический экспорт в `out/`, включая `out/index.html` и HTML-файлы маршрутов. Загрузите **содержимое** папки `out/` на любой обычный статический хостинг. Backend в экспорт не входит; его адрес встраивается при сборке через `NEXT_PUBLIC_API_URL`.
+Next.js создаст полноценный статический экспорт в `out/`, включая `out/index.html` и HTML-файлы маршрутов. Backend в экспорт не входит; его адрес встраивается при сборке через `NEXT_PUBLIC_API_URL`.
+
+При push в ветку `main` workflow `.github/workflows/deploy-pages.yml` автоматически проверяет типы, собирает frontend в режиме GitHub Pages и публикует `out/`. В этом режиме используется project-site префикс `/IskraAi`; обычная локальная разработка остаётся доступной от корня `/`.
+
+Локальная проверка production-сборки для GitHub Pages:
+
+```bash
+GITHUB_PAGES=true npm run build
+```
 
 Для локальной проверки отдавайте `out/` по HTTP, например любым простым static server:
 
