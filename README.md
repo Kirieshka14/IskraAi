@@ -19,13 +19,18 @@ cp .env.example .env.local # необязательно
 npm run dev
 ```
 
-Единственная переменная окружения:
+Публичные переменные окружения:
 
 ```dotenv
 NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=your-public-site-key
 ```
 
-`NEXT_PUBLIC_API_URL` публична и должна указывать на отдельный IskraAi backend. Не добавляйте private env или ключи в этот репозиторий. Если переменная не задана, frontend всё равно собирается, а зависящие от API экраны показывают честное состояние недоступности. При подключении backend он должен разрешить точный origin frontend через credentialed CORS.
+`NEXT_PUBLIC_API_URL` публична и должна указывать на отдельный IskraAi backend. `NEXT_PUBLIC_TURNSTILE_SITE_KEY` — публичный site key Cloudflare Turnstile для регистрации; secret key относится только к backend и не должен добавляться во frontend или в переменные `NEXT_PUBLIC_*`. Если site key не задан, регистрация fail-closed с понятным сообщением, а вход остаётся доступен. Не добавляйте private env или ключи в этот репозиторий. Если переменная не задана, frontend всё равно собирается, а зависящие от API экраны показывают честное состояние недоступности. При подключении backend он должен разрешить точный origin frontend через credentialed CORS.
+
+### Cloudflare Turnstile и CSP
+
+Turnstile загружается только в режиме регистрации через официальный скрипт `https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit` и рендерится явно. При строгой Content Security Policy разрешите `https://challenges.cloudflare.com` как минимум в директивах `script-src` и `frame-src`. Политику CSP следует задавать на static hosting/CDN, поскольку проект публикуется как static export.
 
 ## Статическая сборка и публикация
 
