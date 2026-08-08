@@ -69,3 +69,14 @@ npx serve out
 - `lib/subscription-plans.ts` — тарифный UI-конфиг.
 
 API Route Handlers, `lib/server`, Supabase config/migrations и backend TODO находятся только в приватном backend-проекте.
+
+## Production
+
+Frontend origin: `https://iskraai.run.place`; backend: `https://bacand-iskra.onrender.com`. Build with these browser-safe values:
+
+```dotenv
+NEXT_PUBLIC_API_URL=https://bacand-iskra.onrender.com
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=<public-site-key>
+```
+
+The Turnstile secret belongs only in backend hosting secrets. Theme defaults to dark and the light-theme choice is persisted in `localStorage`.

@@ -1,5 +1,6 @@
 import type { Bot, Message, ResponseSize, SubscriptionPlan, UserProfile } from "./types";
 
+export interface LoginInput { email: string; password: string; }
 export interface RegisterInput { email: string; password: string; displayName: string; isAdultConfirmed: true; termsAccepted: true; newsletterOptIn: boolean; captchaToken: string; }
 export interface CreateBotInput { name: string; description: string; systemPrompt: string; genre: Bot["genre"]; avatarUrl?: string | null; }
 export interface SendMessageInput { conversationId: string; content: string; responseSize: ResponseSize; operationKey: string; regenerateMessageId?: string; }
@@ -29,6 +30,7 @@ export class HttpApiClient {
   getBots = () => apiRequest<Bot[]>("/api/bots");
   getBot = (id: string) => apiRequest<Bot>(`/api/bots/${id}`);
   getProfile = () => apiRequest<UserProfile>("/api/profile");
+  login = (input: LoginInput) => apiRequest<UserProfile>("/api/auth/login", { method: "POST", body: JSON.stringify(input) });
   register = (input: RegisterInput) => apiRequest<UserProfile>("/api/auth/register", { method: "POST", body: JSON.stringify(input) });
   createBot = (input: CreateBotInput) => apiRequest<Bot>("/api/bots", { method: "POST", body: JSON.stringify(input) });
   sendMessage = (input: SendMessageInput) => apiRequest<Message>(`/api/conversations/${input.conversationId}/messages`, { method: "POST", body: JSON.stringify(input) });

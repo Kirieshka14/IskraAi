@@ -8,7 +8,7 @@ export const subscriptionPlans: SubscriptionPlan[] = [
   { id: "free", name: "Свободный", durationDays: 1, priceRub: 0, dailyPointAllowance: 100, isFeatured: false },
   { id: "3d", name: "Искра·3 дня", durationDays: 3, priceRub: 149, dailyPointAllowance: null, isFeatured: false },
   { id: "7d", name: "Искра·Неделя", durationDays: 7, priceRub: 299, dailyPointAllowance: null, isFeatured: false },
-  { id: "month", name: "Искра·Месяц", durationDays: 30, priceRub: 500, dailyPointAllowance: null, isFeatured: true },
+  { id: "month", name: "Искра·Месяц", durationDays: 30, priceRub: 499, dailyPointAllowance: null, isFeatured: true },
   { id: "year", name: "Искра·Год", durationDays: 365, priceRub: 4490, dailyPointAllowance: null, isFeatured: false },
 ];
 
