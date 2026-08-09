@@ -5,7 +5,7 @@ type BrandMarkProps = {
   title?: string;
 };
 
-/** A clean, single-colour four-ray spark derived from the IskraAi visual direction. */
+/** Four-point Iskra mark with the small crescent from the supplied reference. */
 export function BrandMark({ className, title }: BrandMarkProps) {
   return (
     <svg
@@ -18,7 +18,7 @@ export function BrandMark({ className, title }: BrandMarkProps) {
       aria-hidden={title ? undefined : true}
       focusable="false"
     >
-      <path d="M32 2L38.7 25.3L62 32L38.7 38.7L32 62L25.3 38.7L2 32L25.3 25.3L32 2Z" fill="currentColor" />
+      <path d="M28 2L34.2 23.8L56 30L34.2 36.2L28 58L21.8 36.2L0 30L21.8 23.8L28 2Z" fill="currentColor" /><path d="M55 8c-6 1.2-10 6.5-10 12.5S49 31.8 55 33c-3.2 2.8-8 3.2-11.7.8A14.5 14.5 0 0 1 55 8Z" fill="currentColor" opacity=".9" />
     </svg>
   );
 }

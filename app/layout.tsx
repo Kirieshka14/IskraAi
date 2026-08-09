@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Manrope, Literata } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/header";
+import { AuthGuard } from "@/components/auth-guard";
 const manrope=Manrope({subsets:["cyrillic"],variable:"--font-manrope"});
 const literata=Literata({subsets:["cyrillic"],variable:"--font-literata"});
 const basePath=process.env.GITHUB_PAGES === "true" ? "/IskraAi" : "";
@@ -19,4 +20,4 @@ export const metadata:Metadata={
   },
 };
 export const viewport:Viewport={width:"device-width",initialScale:1,viewportFit:"cover",themeColor:"#f7f4ee"};
-export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="ru"><body className={`${manrope.variable} ${literata.variable}`}><Header/>{children}<footer className="border-t border-stone-200"><div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom))] text-xs leading-5 text-stone-500 sm:flex-row sm:justify-between md:px-6"><span>© 2026 IskraAi · Только для пользователей 18+</span><span>Все диалоги могут использоваться для улучшения сервиса · Условия · Конфиденциальность</span></div></footer></body></html>}
+export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="ru"><body className={`${manrope.variable} ${literata.variable}`}><AuthGuard><Header/>{children}</AuthGuard><footer className="border-t border-stone-200"><div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom))] text-xs leading-5 text-stone-500 sm:flex-row sm:justify-between md:px-6"><span>© 2026 IskraAi · Только для пользователей 18+</span><span>Все диалоги могут использоваться для улучшения сервиса · Условия · Конфиденциальность</span></div></footer></body></html>}
