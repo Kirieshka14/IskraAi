@@ -2,46 +2,48 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { apiRequest } from "@/lib/api";
+import { AppSkeleton } from "@/components/app-skeleton";
+import { clearCachedSession, hasCachedSession, validateSession } from "@/lib/session";
 
 const isPublicRoute = (path: string) =>
   path === "/auth" || path === "/register" || path === "/auth/callback";
 
+type GateState = "checking-local" | "validating" | "valid";
+
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
-  const [validatedPath, setValidatedPath] = useState<string | null>(
-    isPublicRoute(path) ? path : null,
-  );
   const isPublic = isPublicRoute(path);
-  const ready = isPublic || validatedPath === path;
+  const [state, setState] = useState<GateState>(isPublic ? "valid" : "checking-local");
 
   useEffect(() => {
-    let active = true;
-    if (isPublic) {
-      setValidatedPath(path);
-      return () => { active = false; };
+    let current = true;
+    if (isPublic) { setState("valid"); return () => { current = false; }; }
+
+    // The hint only chooses immediate UI. Protected children remain unmounted
+    // until the server confirms the HttpOnly-cookie-backed session.
+    if (!hasCachedSession()) {
+      router.replace(`/auth?next=${encodeURIComponent(path)}`);
+      return () => { current = false; };
     }
 
-    // Hide every protected route again while its session is validated. This also
-    // prevents a public-to-private client navigation from reusing stale state.
-    setValidatedPath(null);
-    apiRequest("/api/points")
-      .then(() => { if (active) setValidatedPath(path); })
-      .catch(() => {
-        if (active) router.replace(`/auth?next=${encodeURIComponent(path)}`);
-      });
+    setState("validating");
+    validateSession().then((result) => {
+      if (!current) return;
+      if (result === "valid") setState("valid");
+      else {
+        clearCachedSession();
+        router.replace(`/auth?next=${encodeURIComponent(path)}`);
+      }
+    }).catch(() => {
+      if (!current) return;
+      clearCachedSession();
+      router.replace(`/auth?next=${encodeURIComponent(path)}`);
+    });
 
-    return () => { active = false; };
+    return () => { current = false; };
   }, [isPublic, path, router]);
 
-  if (!ready) {
-    return (
-      <main className="grid min-h-screen place-items-center" aria-busy="true">
-        <p>Проверяем сессию…</p>
-      </main>
-    );
-  }
-
-  return <>{children}</>;
+  if (isPublic || state === "valid") return <>{children}</>;
+  return <AppSkeleton />;
 }
