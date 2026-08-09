@@ -5,9 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AppSkeleton } from "@/components/app-skeleton";
 import { clearCachedSession, hasCachedSession, validateSession } from "@/lib/session";
 
-const isPublicRoute = (path: string) =>
-  path === "/auth" || path === "/register" || path === "/auth/callback";
-
+import { isPublicRoute } from "@/lib/routes";
 type GateState = "checking-local" | "validating" | "valid";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {

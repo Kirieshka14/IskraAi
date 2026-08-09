@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../lib/api";
+import { isPublicRoute, normalizedPathname } from "../lib/routes";
 import {
   cacheSession, clearCachedSession, hasCachedSession,
   resetSessionValidationForTests, validateSession,
@@ -17,6 +18,14 @@ function storage() {
 afterEach(() => { vi.useRealTimers(); resetSessionValidationForTests(); });
 
 describe("startup session gate", () => {
+  it("treats trailing-slash auth exports as public routes", () => {
+    expect(normalizedPathname("/auth/")).toBe("/auth");
+    expect(isPublicRoute("/auth/")).toBe(true);
+    expect(isPublicRoute("/register/")).toBe(true);
+    expect(isPublicRoute("/auth/callback/")).toBe(true);
+    expect(isPublicRoute("/")).toBe(false);
+  });
+
   it("no local session selects auth immediately without a session fetch", () => {
     const local = storage();
     const request = vi.fn();
