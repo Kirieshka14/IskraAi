@@ -13,7 +13,8 @@ export function getApiUrl(path:string){
 export async function apiRequest<T>(path:string,init:RequestInit={}):Promise<T>{
   const headers=new Headers(init.headers);
   if(init.body) headers.set("content-type","application/json");
-  const response=await fetch(getApiUrl(path),{...init,headers,credentials:"include",cache:"no-store"});
+  let response:Response;
+  try{response=await fetch(getApiUrl(path),{...init,headers,credentials:"include",cache:"no-store",signal:AbortSignal.any([init.signal,AbortSignal.timeout(30_000)].filter(Boolean) as AbortSignal[])});}catch(error){if(error instanceof DOMException&&error.name==="TimeoutError")throw new ApiError(504,"API_TIMEOUT","Сервер долго не отвечает. Попробуйте ещё раз.");throw error;}
   const payload=await response.json().catch(()=>null);
   if(!response.ok) throw new ApiError(response.status,payload?.error?.code??"API_ERROR",payload?.error?.message??"Не удалось выполнить запрос");
   return (payload?.data??payload) as T;
