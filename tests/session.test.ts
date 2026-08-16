@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../lib/api";
 import { isPublicRoute, normalizedPathname } from "../lib/routes";
 import {
-  cacheSession, clearCachedSession, hasCachedSession,
+  clearCachedSession, hasCachedSession, storeSession,
   resetSessionValidationForTests, validateSession,
 } from "../lib/session";
 
@@ -35,7 +35,7 @@ describe("startup session gate", () => {
 
   it("valid cached session selects shell immediately and resolves", async () => {
     const local = storage();
-    cacheSession(local);
+    storeSession({ accessToken: "at", refreshToken: "rt" }, local);
     expect(hasCachedSession(local)).toBe(true);
     await expect(validateSession(() => Promise.resolve({}))).resolves.toBe("valid");
   });
@@ -50,7 +50,7 @@ describe("startup session gate", () => {
     }), 10);
     await vi.advanceTimersByTimeAsync(10);
     await expect(result).resolves.toBe("timeout");
-    const local = storage(); cacheSession(local); clearCachedSession(local);
+    const local = storage(); storeSession({ accessToken: "at", refreshToken: "rt" }, local); clearCachedSession(local);
     expect(hasCachedSession(local)).toBe(false);
   });
 
