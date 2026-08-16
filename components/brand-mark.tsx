@@ -11,7 +11,7 @@ type BrandMarkProps = {
 export function BrandMark({ className, title }: BrandMarkProps) {
   return (
     <Image
-      src={`${basePath}/logo.jpg`}
+      src={`${basePath}/logo-spark.png`}
       alt={title ?? ""}
       width={64}
       height={64}
