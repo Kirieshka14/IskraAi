@@ -1,4 +1,4 @@
-name: Deploy frontend to GitHub Pages
+name: Deploy frontend to gh-pages
 
 on:
   push:
@@ -7,95 +7,47 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: gh-pages
+  cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@v4
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+        with:
+          fetch-depth: 0
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
       - name: Install dependencies
-        shell: bash
-        run: |
-          set +e
-          npm ci > ci-install.log 2>&1
-          echo $? > ci-install.status
+        run: npm ci
       - name: Typecheck
-        shell: bash
-        run: |
-          set +e
-          npm run typecheck > ci-typecheck.log 2>&1
-          echo $? > ci-typecheck.status
+        run: npm run typecheck
       - name: Build static export
-        shell: bash
+        run: npm run build
         env:
           NEXT_PUBLIC_API_URL: "https://bacand-iskra.onrender.com"
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: "0x4AAAAAAEKIl3S-Vfy2BCGR"
+      - name: Preserve custom domain
         run: |
-          set +e
-          npm run build > ci-build.log 2>&1
-          echo $? > ci-build.status
-      - name: Save diagnostics
+          printf '%s\n' 'iskraai.run.place' > out/CNAME
+          touch out/.nojekyll
+      - name: Publish gh-pages branch
         shell: bash
         run: |
-          {
-            echo "=== npm ci (status $(cat ci-install.status)) ==="
-            tail -n 120 ci-install.log
-            echo
-            echo "=== typecheck (status $(cat ci-typecheck.status)) ==="
-            tail -n 160 ci-typecheck.log
-            echo
-            echo "=== build (status $(cat ci-build.status)) ==="
-            tail -n 200 ci-build.log
-          } > ci-diagnostics.log
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f ci-diagnostics.log
-          git commit -m "Record Pages build diagnostics [skip ci]" || true
-          git push origin HEAD:main
-      - name: Verify build succeeded
-        shell: bash
-        run: |
-          test "$(cat ci-install.status)" = "0"
-          test "$(cat ci-typecheck.status)" = "0"
-          test "$(cat ci-build.status)" = "0"
-          test -d out
-      - name: Sync export for branch-based Pages
-        continue-on-error: true
-        shell: bash
-        run: |
-          cp -a out/. .
-          mapfile -t outputs < <(find out -mindepth 1 -maxdepth 1 -printf '%f\n')
-          git add -f -A -- "${outputs[@]}"
-          if ! git diff --cached --quiet; then
-            git commit -m "Publish static export [skip ci]"
-            git push origin HEAD:main
-          fi
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./out
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          git fetch origin gh-pages
+          git worktree add /tmp/gh-pages origin/gh-pages
+          find /tmp/gh-pages -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a out/. /tmp/gh-pages/
+          cd /tmp/gh-pages
+          git add -A
+          git commit -m "Deploy: refreshed interface and direct publishing" || exit 0
+          git push origin HEAD:gh-pages
