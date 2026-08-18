@@ -1,0 +1,1 @@
+import{Suspense}from"react";import{StoryReader}from"@/components/story-reader";export default function StoryPage(){return <Suspense fallback={<main className="page-wrap">Загружаем историю…</main>}><StoryReader/></Suspense>}
