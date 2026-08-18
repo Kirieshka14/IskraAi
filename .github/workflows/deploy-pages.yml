@@ -37,6 +37,7 @@ jobs:
           NEXT_PUBLIC_API_URL: "https://bacand-iskra.onrender.com"
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: "0x4AAAAAAEKIl3S-Vfy2BCGR"
       - name: Sync export for branch-based Pages
+        continue-on-error: true
         shell: bash
         run: |
           cp -a out/. .
