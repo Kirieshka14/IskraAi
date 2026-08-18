@@ -1,104 +1,11 @@
 "use client";
-
-import { useState, type FormEvent } from "react";
-import { CheckCircle2, Upload } from "lucide-react";
-import { Button, Field, inputClass } from "@/components/ui";
-import { genreLabels } from "@/lib/mock-data";
-import { apiRequest, HttpApiClient } from "@/lib/api";
-import type { Genre } from "@/lib/types";
-
-const api = new HttpApiClient();
-
-export default function CreatePage() {
-  const [step, setStep] = useState(1);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [created, setCreated] = useState(false);
-  const [name, setName] = useState("");
-  const [genre, setGenre] = useState<Genre | "">("");
-  const [description, setDescription] = useState("");
-  const [systemPrompt, setSystemPrompt] = useState("");
-  const [openingLine, setOpeningLine] = useState("");
-  const [avatar, setAvatar] = useState<File | null>(null);
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (step === 1) {
-      setStep(2);
-      return;
-    }
-
-    setBusy(true);
-    setMessage(null);
-    try {
-      let avatarUrl: string | null = null;
-      if (avatar) {
-        const form = new FormData();
-        form.set("avatar", avatar);
-        avatarUrl = (await apiRequest<{ url: string }>("/api/bots/avatar", { method: "POST", body: form })).url;
-      }
-      await api.createBot({
-        name,
-        genre: genre as Genre,
-        description,
-        systemPrompt: `${systemPrompt}\n\nПервая реплика: ${openingLine}`,
-        avatarUrl,
-      });
-      setCreated(true);
-      setMessage("Персонаж создан и опубликован.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Не удалось создать персонажа");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <main className="page-enter mx-auto max-w-3xl px-4 py-8 sm:py-12 md:px-6">
-      <div className="mb-8 max-w-2xl">
-        <p className="text-sm font-bold text-white">Новый персонаж</p>
-        <h1 className="display mt-2 text-3xl font-semibold leading-tight sm:text-4xl">Создайте своего персонажа</h1>
-        <p className="mt-3 text-base leading-7 text-stone-500">Заполните основные данные и настройте поведение. После сохранения персонаж будет доступен сразу.</p>
-      </div>
-
-      <div className="mb-6 flex items-center gap-3" aria-label={`Шаг ${step} из 2`}>
-        {[1, 2].map((item) => (
-          <span key={item} className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${step >= item ? "bg-white" : "bg-stone-700"}`} />
-        ))}
-        <span className="text-sm font-semibold text-stone-400">{step}/2</span>
-      </div>
-
-      <form onSubmit={submit} className="surface-lift rounded-2xl border border-stone-200 bg-white p-5 shadow-soft sm:p-8">
-        {step === 1 && (
-          <div className="form-step grid gap-6">
-            <div className="grid gap-6 sm:grid-cols-[160px_1fr]">
-              <label className="grid aspect-square min-h-40 place-items-center rounded-2xl border-2 border-dashed border-stone-500 bg-stone-900 text-center text-sm text-stone-300 transition hover:border-white hover:bg-stone-800">
-                <span><Upload className="mx-auto mb-3" />Загрузить аватар<br /><small className="mt-1 block text-stone-500">JPG, PNG, WebP до 5 МБ</small></span>
-                <input accept="image/jpeg,image/png,image/webp" type="file" className="hidden" onChange={(e) => setAvatar(e.target.files?.[0] ?? null)} />
-              </label>
-              <div className="grid gap-5">
-                <Field label="Имя персонажа"><input required value={name} onChange={(e) => setName(e.target.value)} className={inputClass} maxLength={60} /></Field>
-                <Field label="Жанр"><select key={genre || "empty"} required value={genre} onChange={(e) => setGenre(e.target.value as Genre)} className={`${inputClass} genre-select ${genre ? "genre-selected" : ""}`}><option value="" disabled>Выберите жанр</option>{Object.entries(genreLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></Field>
-              </div>
-            </div>
-            <Field label="Короткое описание"><textarea required value={description} onChange={(e) => setDescription(e.target.value)} className={`${inputClass} h-32 py-3 leading-6`} maxLength={300} /></Field>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="form-step grid gap-6">
-            <Field label="Поведение и правила персонажа" hint="Опишите стиль общения, характер, границы роли и важные детали."><textarea required value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} className={`${inputClass} h-64 py-3 leading-6`} maxLength={10000} /></Field>
-            <Field label="Первая реплика"><textarea required value={openingLine} onChange={(e) => setOpeningLine(e.target.value)} className={`${inputClass} h-32 py-3 leading-6`} /></Field>
-          </div>
-        )}
-
-        {message && <p role="status" className={`mt-6 flex items-center gap-2 rounded-xl border p-4 text-sm ${created ? "border-emerald-800 bg-emerald-950/40 text-emerald-200" : "border-red-900 bg-red-950/40 text-red-200"}`}>{created && <CheckCircle2 size={18} />}{message}</p>}
-
-        <div className="mt-8 flex flex-col-reverse gap-3 border-t border-stone-700 pt-5 sm:flex-row sm:justify-between">
-          <Button type="button" disabled={step === 1 || busy || created} onClick={() => setStep(1)} className="w-full bg-stone-800 text-white ring-1 ring-stone-600 hover:bg-stone-700 sm:w-auto">Назад</Button>
-          <Button disabled={busy || created} className="primary-action w-full sm:w-auto">{busy ? "Создаём…" : step === 1 ? "Продолжить" : "Создать персонажа"}</Button>
-        </div>
-      </form>
-    </main>
-  );
-}
+import{useMemo,useState,type FormEvent}from"react";
+import{CheckCircle2,ImagePlus,Sparkles}from"lucide-react";
+import{Button,Field,inputClass}from"@/components/ui";
+import{genreLabels}from"@/lib/mock-data";
+import{apiRequest,HttpApiClient}from"@/lib/api";
+import type{Genre}from"@/lib/types";
+const api=new HttpApiClient();
+const tags=["Романтика","Дружба","Заботливый","Сложный","Юмор","Психология","Приключения","Мистика","Повседневность","Хоррор"];
+export default function CreatePage(){const[busy,setBusy]=useState(false),[message,setMessage]=useState<string|null>(null),[created,setCreated]=useState(false),[name,setName]=useState(""),[subtitle,setSubtitle]=useState(""),[genre,setGenre]=useState<Genre|"">(""),[description,setDescription]=useState(""),[appearance,setAppearance]=useState(""),[personality,setPersonality]=useState(""),[relationship,setRelationship]=useState(""),[openingLine,setOpeningLine]=useState(""),[selectedTags,setSelectedTags]=useState<string[]>([]),[avatar,setAvatar]=useState<File|null>(null);const initials=useMemo(()=>name.split(/\s+/).filter(Boolean).map(x=>x[0]).slice(0,2).join("").toUpperCase()||"ИИ",[name]);async function submit(event:FormEvent){event.preventDefault();setBusy(true);setMessage(null);try{let avatarUrl:string|null=null;if(avatar){const form=new FormData();form.set("avatar",avatar);avatarUrl=(await apiRequest<{url:string}>("/api/bots/avatar",{method:"POST",body:form})).url}const systemPrompt=`Ты — ${name}.\nПодпись: ${subtitle}.\nВнешность: ${appearance}.\nХарактер и стиль речи: ${personality}.\nОтношение к пользователю: ${relationship}.\nТеги: ${selectedTags.join(", ")}.\nВсегда оставайся в роли и отвечай без долгих рассуждений.\nПервая реплика: ${openingLine}`;await api.createBot({name,genre:genre as Genre,description,systemPrompt,avatarUrl});setCreated(true);setMessage("Персонаж создан и опубликован.")}catch(error){setMessage(error instanceof Error?error.message:"Не удалось создать персонажа")}finally{setBusy(false)}}return <main className="editor-page"><header className="editor-heading"><div><span className="eyebrow"><Sparkles size={14}/>Новый персонаж</span><h1>Создайте своего героя</h1><p>Все настройки на одной странице. Карточка слева обновляется сразу.</p></div></header><form onSubmit={submit} className="editor-layout"><aside className="preview-card"><div className="preview-image">{initials}</div><h2>{name||"Имя персонажа"}</h2><p>{subtitle||"Короткая подпись"}</p><label className="avatar-button"><ImagePlus size={18}/>{avatar?avatar.name:"Добавить аватар"}<input className="hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setAvatar(e.target.files?.[0]??null)}/></label></aside><div className="editor-sections"><Section title="Основное"><div className="two-cols"><Field label="Имя"><input required className={inputClass} value={name} onChange={e=>setName(e.target.value)} placeholder="Например, Мира" maxLength={60}/></Field><Field label="Подпись"><input required className={inputClass} value={subtitle} onChange={e=>setSubtitle(e.target.value)} placeholder="Давняя подруга" maxLength={80}/></Field></div><Field label="Короткое описание"><textarea required className={`${inputClass} h-28 py-3`} value={description} onChange={e=>setDescription(e.target.value)} maxLength={300}/></Field></Section><Section title="Описание"><Field label="Внешность"><textarea required className={`${inputClass} h-28 py-3`} value={appearance} onChange={e=>setAppearance(e.target.value)} placeholder="Внешность, заметные детали, одежда…"/></Field><Field label="Характер и стиль речи"><textarea required className={`${inputClass} h-40 py-3`} value={personality} onChange={e=>setPersonality(e.target.value)} placeholder="Характер, цели, манера общения и границы роли…"/></Field><Field label="Отношение к пользователю"><textarea required className={`${inputClass} h-24 py-3`} value={relationship} onChange={e=>setRelationship(e.target.value)} placeholder="Кем пользователь является для персонажа…"/></Field></Section><Section title="Категории"><Field label="Жанр"><select required value={genre} onChange={e=>setGenre(e.target.value as Genre)} className={inputClass}><option value="" disabled>Выберите жанр</option>{Object.entries(genreLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></Field><div><p className="field-label">Теги — до 5</p><div className="tag-cloud">{tags.map(tag=><button type="button" key={tag} onClick={()=>setSelectedTags(current=>current.includes(tag)?current.filter(x=>x!==tag):current.length<5?[...current,tag]:current)} className={selectedTags.includes(tag)?"active":""}>{tag}</button>)}</div></div></Section><Section title="Начало диалога"><Field label="Первая реплика"><textarea required className={`${inputClass} h-32 py-3`} value={openingLine} onChange={e=>setOpeningLine(e.target.value)} placeholder="С чего начнётся разговор?"/></Field></Section>{message&&<p className={created?"notice-success":"notice-error"}>{created&&<CheckCircle2 size={18}/>} {message}</p>}<div className="editor-submit"><Button className="primary-action" disabled={busy||created}>{busy?"Создаём…":"Создать персонажа"}</Button></div></div></form></main>}
+function Section({title,children}:{title:string;children:React.ReactNode}){return <section className="editor-section"><h2>{title}</h2><div className="section-fields">{children}</div></section>}
