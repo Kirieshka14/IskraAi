@@ -1,75 +1,21 @@
-import type { Genre, Message, ResponseSize, SubscriptionPlan, UserProfile } from "./types";
+import type { Genre, Message, ResponseSize, StoryDraft, StorySummary, SubscriptionPlan, UserProfile } from "./types";
 import { clearCachedSession, getStoredSession, storeSession, type StoredSession } from "./auth-tokens";
 
-export class ApiError extends Error {
-  constructor(public status:number, public code:string, message:string){ super(message); }
-}
-
-export function getApiUrl(path:string){
-  const base=process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/,"");
-  if(!base) throw new Error("NEXT_PUBLIC_API_URL is not configured");
-  return `${base}${path.startsWith("/")?path:`/${path}`}`;
-}
-
-async function rawRequest<T>(path:string,init:RequestInit={}):Promise<T>{
-  const headers=new Headers(init.headers);
-  if(init.body && !(init.body instanceof FormData)) headers.set("content-type","application/json");
-  const session=getStoredSession();
-  if(session && !headers.has("authorization")) headers.set("authorization",`Bearer ${session.accessToken}`);
-  let response:Response;
-  try{response=await fetch(getApiUrl(path),{...init,headers,credentials:"include",cache:"no-store",signal:AbortSignal.any([init.signal,AbortSignal.timeout(60_000)].filter(Boolean) as AbortSignal[])});}catch(error){if(error instanceof DOMException&&error.name==="TimeoutError")throw new ApiError(504,"API_TIMEOUT","Сервер долго не отвечает. Попробуйте ещё раз.");throw error;}
-  const payload=await response.json().catch(()=>null);
-  if(!response.ok) throw new ApiError(response.status,payload?.error?.code??"API_ERROR",payload?.error?.message??"Не удалось выполнить запрос");
-  return (payload?.data??payload) as T;
-}
-
-export async function apiRequest<T>(path:string,init:RequestInit={}):Promise<T>{
-  try{
-    return await rawRequest<T>(path,init);
-  }catch(error){
-    if(error instanceof ApiError && error.status===401 && getStoredSession() && !path.startsWith("/api/auth/")){
-      const refreshed=await refreshSession();
-      if(refreshed) return rawRequest<T>(path,init);
-    }
-    throw error;
-  }
-}
-
-export async function refreshSession():Promise<boolean>{
-  const session=getStoredSession();
-  if(!session) return false;
-  try{
-    const next=await rawRequest<{user:{id:string;email:string};session:StoredSession}>("/api/auth/refresh",{method:"POST",body:JSON.stringify({refreshToken:session.refreshToken})});
-    storeSession({...next.session,userId:next.user.id,email:next.user.email});
-    return true;
-  }catch{
-    clearCachedSession();
-    return false;
-  }
-}
-
-export interface ApiBot {
-  id:string; name:string; description:string|null; genre:Genre; avatar_url:string|null;
-  likes_count:number; author_id:string; moderation_status:"approved";
-}
-export interface Conversation {
-  id:string; bot_id:string; created_at:string; last_message_at:string;
-  bots?:{name:string;avatar_url:string|null;genre:Genre}|Array<{name:string;avatar_url:string|null;genre:Genre}>|null;
-}
-export interface Points { remaining:number; total:number; resetsAt:string }
+export class ApiError extends Error { constructor(public status:number,public code:string,message:string){super(message)} }
+export function getApiUrl(path:string){const base=process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/,"");if(!base)throw new Error("NEXT_PUBLIC_API_URL is not configured");return`${base}${path.startsWith("/")?path:`/${path}`}`}
+async function rawRequest<T>(path:string,init:RequestInit={}):Promise<T>{const headers=new Headers(init.headers);if(init.body&&!(init.body instanceof FormData))headers.set("content-type","application/json");const session=getStoredSession();if(session&&!headers.has("authorization"))headers.set("authorization",`Bearer ${session.accessToken}`);let response:Response;try{response=await fetch(getApiUrl(path),{...init,headers,credentials:"include",cache:"no-store",signal:AbortSignal.any([init.signal,AbortSignal.timeout(60_000)].filter(Boolean)as AbortSignal[])})}catch(error){if(error instanceof DOMException&&error.name==="TimeoutError")throw new ApiError(504,"API_TIMEOUT","Сервер долго не отвечает. Попробуйте ещё раз.");throw error}const payload=await response.json().catch(()=>null);if(!response.ok)throw new ApiError(response.status,payload?.error?.code??"API_ERROR",payload?.error?.message??"Не удалось выполнить запрос");return(payload?.data??payload)as T}
+export async function apiRequest<T>(path:string,init:RequestInit={}):Promise<T>{try{return await rawRequest<T>(path,init)}catch(error){if(error instanceof ApiError&&error.status===401&&getStoredSession()&&!path.startsWith("/api/auth/")){const refreshed=await refreshSession();if(refreshed)return rawRequest<T>(path,init)}throw error}}
+export async function refreshSession():Promise<boolean>{const session=getStoredSession();if(!session)return false;try{const next=await rawRequest<{user:{id:string;email:string};session:StoredSession}>("/api/auth/refresh",{method:"POST",body:JSON.stringify({refreshToken:session.refreshToken})});storeSession({...next.session,userId:next.user.id,email:next.user.email});return true}catch{clearCachedSession();return false}}
+export interface ApiBot{id:string;name:string;description:string|null;genre:Genre;avatar_url:string|null;likes_count:number;author_id:string;moderation_status:"approved";created_at?:string;updated_at?:string}
+export interface Conversation{id:string;bot_id:string;created_at:string;last_message_at:string;bots?:{name:string;avatar_url:string|null;genre:Genre}|Array<{name:string;avatar_url:string|null;genre:Genre}>|null}
+export interface Points{remaining:number;total:number;resetsAt:string}
 export type PendingBot={id:string;name:string;description:string|null;system_prompt:string;genre:string;author_id:string;author_display_name:string|null;created_at:string};
-
-export class HttpApiClient {
-  requestOtp=(x:{email:string;purpose:"register";captchaToken:string;displayName:string;password:string;isAdultConfirmed:true;termsAccepted:true;newsletterOptIn:boolean})=>apiRequest<{ok:true}>("/api/auth/otp/request",{method:"POST",body:JSON.stringify(x)});
-  verifyOtp=(x:{email:string;purpose:"register";code:string})=>apiRequest<{user:{id:string;email:string};session:StoredSession}>("/api/auth/otp/verify",{method:"POST",body:JSON.stringify(x)});
-  login=(x:{email:string;password:string})=>apiRequest<{user:{id:string;email:string};session:StoredSession}>("/api/auth/login",{method:"POST",body:JSON.stringify(x)});
-  getBots=()=>apiRequest<ApiBot[]>("/api/bots");
-  createBot=(x:unknown)=>apiRequest<ApiBot>("/api/bots",{method:"POST",body:JSON.stringify(x)});
-  getProfile=()=>apiRequest<UserProfile>("/api/profile");
-  getPlans=()=>apiRequest<SubscriptionPlan[]>("/api/plans");
-  getPoints=()=>apiRequest<Points>("/api/points");
-  getConversations=()=>apiRequest<Conversation[]>("/api/conversations");
-  createConversation=(botId:string)=>apiRequest<Conversation>("/api/conversations",{method:"POST",body:JSON.stringify({botId})});
-  getMessages=(conversationId:string)=>apiRequest<Message[]>(`/api/conversations/${conversationId}/messages`);
-  sendMessage=(x:{conversationId:string;content:string;responseSize:ResponseSize;operationKey:string})=>apiRequest<{userMessage:Message;assistantMessage:Message;remaining:number}>(`/api/conversations/${x.conversationId}/messages`,{method:"POST",body:JSON.stringify(x)});
+export class HttpApiClient{
+requestOtp=(x:{email:string;purpose:"register";captchaToken:string;displayName:string;password:string;isAdultConfirmed:true;termsAccepted:true;newsletterOptIn:boolean})=>apiRequest<{ok:true}>("/api/auth/otp/request",{method:"POST",body:JSON.stringify(x)});
+verifyOtp=(x:{email:string;purpose:"register";code:string})=>apiRequest<{user:{id:string;email:string};session:StoredSession}>("/api/auth/otp/verify",{method:"POST",body:JSON.stringify(x)});
+login=(x:{email:string;password:string})=>apiRequest<{user:{id:string;email:string};session:StoredSession}>("/api/auth/login",{method:"POST",body:JSON.stringify(x)});
+getBots=()=>apiRequest<ApiBot[]>("/api/bots");getMyBots=()=>apiRequest<ApiBot[]>("/api/bots/mine");createBot=(x:unknown)=>apiRequest<ApiBot>("/api/bots",{method:"POST",body:JSON.stringify(x)});
+getStories=()=>apiRequest<StorySummary[]>("/api/stories");getMyStories=()=>apiRequest<StorySummary[]>("/api/stories/mine");createStory=(x:StoryDraft)=>apiRequest<StorySummary>("/api/stories",{method:"POST",body:JSON.stringify(x)});
+getProfile=()=>apiRequest<UserProfile>("/api/profile");getPlans=()=>apiRequest<SubscriptionPlan[]>("/api/plans");getPoints=()=>apiRequest<Points>("/api/points");
+getConversations=()=>apiRequest<Conversation[]>("/api/conversations");createConversation=(botId:string)=>apiRequest<Conversation>("/api/conversations",{method:"POST",body:JSON.stringify({botId})});getMessages=(conversationId:string)=>apiRequest<Message[]>(`/api/conversations/${conversationId}/messages`);sendMessage=(x:{conversationId:string;content:string;responseSize:ResponseSize;operationKey:string})=>apiRequest<{userMessage:Message;assistantMessage:Message;remaining:number}>(`/api/conversations/${x.conversationId}/messages`,{method:"POST",body:JSON.stringify(x)});
 }
