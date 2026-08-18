@@ -28,14 +28,51 @@ jobs:
           node-version: 20
           cache: npm
       - name: Install dependencies
-        run: npm ci
+        shell: bash
+        run: |
+          set +e
+          npm ci > ci-install.log 2>&1
+          echo $? > ci-install.status
       - name: Typecheck
-        run: npm run typecheck
+        shell: bash
+        run: |
+          set +e
+          npm run typecheck > ci-typecheck.log 2>&1
+          echo $? > ci-typecheck.status
       - name: Build static export
-        run: npm run build
+        shell: bash
         env:
           NEXT_PUBLIC_API_URL: "https://bacand-iskra.onrender.com"
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: "0x4AAAAAAEKIl3S-Vfy2BCGR"
+        run: |
+          set +e
+          npm run build > ci-build.log 2>&1
+          echo $? > ci-build.status
+      - name: Save diagnostics
+        shell: bash
+        run: |
+          {
+            echo "=== npm ci (status $(cat ci-install.status)) ==="
+            tail -n 120 ci-install.log
+            echo
+            echo "=== typecheck (status $(cat ci-typecheck.status)) ==="
+            tail -n 160 ci-typecheck.log
+            echo
+            echo "=== build (status $(cat ci-build.status)) ==="
+            tail -n 200 ci-build.log
+          } > ci-diagnostics.log
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f ci-diagnostics.log
+          git commit -m "Record Pages build diagnostics [skip ci]" || true
+          git push origin HEAD:main
+      - name: Verify build succeeded
+        shell: bash
+        run: |
+          test "$(cat ci-install.status)" = "0"
+          test "$(cat ci-typecheck.status)" = "0"
+          test "$(cat ci-build.status)" = "0"
+          test -d out
       - name: Sync export for branch-based Pages
         continue-on-error: true
         shell: bash
@@ -44,8 +81,6 @@ jobs:
           mapfile -t outputs < <(find out -mindepth 1 -maxdepth 1 -printf '%f\n')
           git add -f -A -- "${outputs[@]}"
           if ! git diff --cached --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git commit -m "Publish static export [skip ci]"
             git push origin HEAD:main
           fi
