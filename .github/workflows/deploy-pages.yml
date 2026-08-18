@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -36,6 +36,18 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: "https://bacand-iskra.onrender.com"
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: "0x4AAAAAAEKIl3S-Vfy2BCGR"
+      - name: Sync export for branch-based Pages
+        shell: bash
+        run: |
+          cp -a out/. .
+          mapfile -t outputs < <(find out -mindepth 1 -maxdepth 1 -printf '%f\n')
+          git add -f -A -- "${outputs[@]}"
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Publish static export [skip ci]"
+            git push origin HEAD:main
+          fi
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
