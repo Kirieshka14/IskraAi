@@ -78,7 +78,7 @@ export default function CreatePage() {
               </label>
               <div className="grid gap-5">
                 <Field label="Имя персонажа"><input required value={name} onChange={(e) => setName(e.target.value)} className={inputClass} maxLength={60} /></Field>
-                <Field label="Жанр"><select required value={genre} onChange={(e) => setGenre(e.target.value as Genre)} className={inputClass}><option value="" disabled>Выберите жанр</option>{Object.entries(genreLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></Field>
+                <Field label="Жанр"><select key={genre || "empty"} required value={genre} onChange={(e) => setGenre(e.target.value as Genre)} className={`${inputClass} genre-select ${genre ? "genre-selected" : ""}`}><option value="" disabled>Выберите жанр</option>{Object.entries(genreLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></Field>
               </div>
             </div>
             <Field label="Короткое описание"><textarea required value={description} onChange={(e) => setDescription(e.target.value)} className={`${inputClass} h-32 py-3 leading-6`} maxLength={300} /></Field>
@@ -96,7 +96,7 @@ export default function CreatePage() {
 
         <div className="mt-8 flex flex-col-reverse gap-3 border-t border-stone-700 pt-5 sm:flex-row sm:justify-between">
           <Button type="button" disabled={step === 1 || busy || created} onClick={() => setStep(1)} className="w-full bg-stone-800 text-white ring-1 ring-stone-600 hover:bg-stone-700 sm:w-auto">Назад</Button>
-          <Button disabled={busy || created} className="w-full sm:w-auto">{busy ? "Создаём…" : step === 1 ? "Продолжить" : "Создать персонажа"}</Button>
+          <Button disabled={busy || created} className="primary-action w-full sm:w-auto">{busy ? "Создаём…" : step === 1 ? "Продолжить" : "Создать персонажа"}</Button>
         </div>
       </form>
     </main>
