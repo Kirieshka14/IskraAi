@@ -1,12 +1,12 @@
 "use client";import{useCallback,useEffect,useRef,useState,type ChangeEvent,type ClipboardEvent,type FormEvent,type KeyboardEvent}from"react";import{useRouter}from"next/navigation";import{Turnstile,type TurnstileHandle}from"@/components/turnstile";import{BrandMark}from"@/components/brand-mark";import{Field,inputClass}from"@/components/ui";import{HttpApiClient,ApiError,getApiUrl}from"@/lib/api";import{storeSession}from"@/lib/session";
-const api=new HttpApiClient(),siteKey=process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY??"";
+const api=new HttpApiClient(),siteKey=process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY??"",captchaEnabled=process.env.NEXT_PUBLIC_CAPTCHA_ENABLED==="true";
 let warmDone=false,warmP:Promise<void>|null=null;
 function startWarm(){if(!warmP)warmP=(async()=>{try{await fetch(getApiUrl("/api/capabilities"),{cache:"no-store",signal:AbortSignal.timeout(55_000)});warmDone=true}catch{}})();return warmP}
 async function withRetry<T>(fn:()=>Promise<T>,retries=2):Promise<T>{if(!warmDone&&warmP)try{await warmP}catch{};for(let i=0;i<=retries;i++){try{return await fn()}catch(e){if(i===retries||e instanceof ApiError)throw e;await new Promise(r=>setTimeout(r,3000))}}throw new Error("Ошибка")}
 type Mode="register"|"login";type AuthSession={user:{id:string;email:string};session:{accessToken:string;refreshToken:string}};
 const EMPTY=["","","","","",""];
 export default function AuthPage(){const router=useRouter(),ref=useRef<TurnstileHandle>(null);useEffect(()=>{startWarm()},[]);
-const[mode,setMode]=useState<Mode>("register"),[animKey,setAnimKey]=useState(0),[slide,setSlide]=useState<"none"|"left"|"right">("none"),[step,setStep]=useState<"email"|"code">("email"),[email,setEmail]=useState(""),[name,setName]=useState(""),[password,setPassword]=useState(""),[adult,setAdult]=useState(false),[terms,setTerms]=useState(false),[news,setNews]=useState(false),[captcha,setCaptcha]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null);
+const[mode,setMode]=useState<Mode>("register"),[animKey,setAnimKey]=useState(0),[slide,setSlide]=useState<"none"|"left"|"right">("none"),[step,setStep]=useState<"email"|"code">("email"),[email,setEmail]=useState(""),[name,setName]=useState(""),[password,setPassword]=useState(""),[adult,setAdult]=useState(false),[terms,setTerms]=useState(false),[news,setNews]=useState(false),[captcha,setCaptcha]=useState<string|null>(captchaEnabled?null:"captcha-disabled"),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null);
 const[digits,setDigits]=useState<string[]>(EMPTY),[activeBox,setActiveBox]=useState(0);const boxRefs=useRef<Array<HTMLInputElement|null>>([]);
 const code=digits.join("");
 const token=useCallback((x:string|null)=>setCaptcha(x),[]);
@@ -17,8 +17,8 @@ function boxKeyDown(i:number,e:KeyboardEvent<HTMLInputElement>){if(e.key==="Back
 function boxPaste(e:ClipboardEvent<HTMLInputElement>){e.preventDefault();const clean=e.clipboardData.getData("text").replace(/\D/g,"").slice(0,6);if(!clean)return;const next=EMPTY.map((_,k)=>clean[k]??"" );setDigits(next);const focus=Math.min(clean.length,5);boxRefs.current[focus]?.focus();setActiveBox(focus)}
 async function submit(e:FormEvent){e.preventDefault();setBusy(true);setError(null);
 try{
-if(step==="email"){if(!captcha)throw new Error("Подтвердите, что вы не робот");
-if(mode==="register"){await withRetry(()=>api.requestOtp({email,purpose:"register",captchaToken:captcha,displayName:name,password,isAdultConfirmed:true,termsAccepted:true,newsletterOptIn:news}));setStep("code");setDigits(EMPTY);setActiveBox(0)}
+if(step==="email"){if(captchaEnabled&&!captcha)throw new Error("Подтвердите, что вы не робот");
+if(mode==="register"){await withRetry(()=>api.requestOtp({email,purpose:"register",captchaToken:captcha??"captcha-disabled",displayName:name,password,isAdultConfirmed:true,termsAccepted:true,newsletterOptIn:news}));setStep("code");setDigits(EMPTY);setActiveBox(0)}
 else finish(await withRetry(()=>api.login({email,password})))}
 else finish(await withRetry(()=>api.verifyOtp({email,purpose:"register",code})))}
 catch(x){const isNetErr=x instanceof Error&&(x.message==="Load failed"||x.message.includes("NetworkError")||x.message.includes("fetch"));const msg=x instanceof ApiError?x.message:isNetErr?"Сервер просыпается. Попробуйте ещё раз через пару секунд.":x instanceof Error?x.message:"Ошибка";setError(msg);ref.current?.reset()}
@@ -42,9 +42,9 @@ return <main className="auth-shell"><section className="auth-card"><div classNam
 <Field label="Электронная почта"><input required type="email" value={email} onChange={e=>setEmail(e.target.value)} className={`${inputClass} auth-input`} autoComplete="email"/></Field>
 <Field label="Пароль"><input required type="password" minLength={8} value={password} onChange={e=>setPassword(e.target.value)} className={`${inputClass} auth-input`} autoComplete={mode==="register"?"new-password":"current-password"}/></Field>
 {mode==="register"&&<><label className="auth-check"><input required type="checkbox" checked={adult} onChange={e=>setAdult(e.target.checked)}/><span>Мне исполнилось 18 лет</span></label><label className="auth-check"><input required type="checkbox" checked={terms} onChange={e=>setTerms(e.target.checked)}/><span>Принимаю условия и политику конфиденциальности</span></label><label className="auth-check"><input type="checkbox" checked={news} onChange={e=>setNews(e.target.checked)}/><span>Получать новости</span></label></>}
-<div className="turnstile-wrap">{siteKey?<Turnstile ref={ref} siteKey={siteKey} onTokenChange={token}/>:<p className="auth-error">Проверка безопасности не настроена</p>}</div>
+{captchaEnabled&&<div className="turnstile-wrap">{siteKey?<Turnstile ref={ref} siteKey={siteKey} onTokenChange={token}/>:<p className="auth-error">Проверка безопасности не настроена</p>}</div>}
 </>:null}
 {error&&<p className="auth-error">{error}</p>}
-<button className="auth-submit" disabled={busy||(step==="email"&&(!captcha||password.length<8||mode==="register"&&(!adult||!terms||!name)))}>{busy?"Подождите…":step==="email"?(mode==="register"?"Создать аккаунт":"Войти"):"Подтвердить"}</button>
+<button className="auth-submit" disabled={busy||(step==="email"&&((captchaEnabled&&!captcha)||password.length<8||mode==="register"&&(!adult||!terms||!name)))}>{busy?"Подождите…":step==="email"?(mode==="register"?"Создать аккаунт":"Войти"):"Подтвердить"}</button>
 {step==="code"&&<button type="button" className="text-sm text-stone-400" onClick={()=>{setStep("email");setDigits(EMPTY);setError(null);ref.current?.reset()}}>Изменить почту</button>}
 </form></section></main>}
